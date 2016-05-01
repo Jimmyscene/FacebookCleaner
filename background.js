@@ -96,7 +96,7 @@ function setUpMessaging(deletionList){
         "url": "https://www.facebook.com/",
         "active" : false
     }, function(tab) {
-        chrome.tabs.executeScript(tab.id, { "file": "newInjection.js" },
+        chrome.tabs.executeScript(tab.id, { "file": "injection.js" },
             function() {
                 var port = chrome.tabs.connect(tab.id);
                 setUpMessaging.index =0;

@@ -82,7 +82,7 @@ function iterateResponse(arr, url,access_token){
 	}
 	$.get(url, function(response,status) {
 		for (var i = response["data"].length - 1; i >= 0; i--) {
-			if( (response["data"][i]["status_type"] != "added_photos") && (response["data"][i]["type"]!="video" ) ){
+			if( (response["data"][i]["status_type"] != "added_photos") ){
 				var id = response["data"][i]["id"].split("_")[1];
 				arr.push( id );
 			}

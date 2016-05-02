@@ -41,7 +41,7 @@ function showOptions(){
 function handleSubmit(form){
 	chrome.storage.sync.get("access_token", function(results) {
 		if(results["access_token"]){
-			var baseURL = "https://graph.facebook.com/v2.5/me/posts/?fields=id& access token=" + results.access_token;
+			var baseURL = "https://graph.facebook.com/v2.5/me/posts/?fields=type,id,status_type& access token=" + results.access_token;
 			switch(form.id){
 				case "beforeForm":
 					var beforeDate = new Date($("#beforeForm").children("input[type=date]")[0].value  + "T06:00:00").toDateString();
@@ -59,15 +59,15 @@ function handleSubmit(form){
 				default:
 					return;	
 			}
-			iterateResponse([],baseURL,results.access_token);
+			iterateResponse("",baseURL,results.access_token);
 		}
 	});
 	
 	
 }
 function iterateResponse(arr, url,access_token){
-	var loadingImg,loadingText;
-	if(arr.length==0){
+	var loadingImg,loadingText,loadingShown;
+	if(arr === ""){
 		$("#options").hide();
 		loadingImg = $("<img/>")
 			.attr( {'id' : 'loadingImg','src':'resources/ajax-loader.gif'} )
@@ -77,12 +77,15 @@ function iterateResponse(arr, url,access_token){
 			.html("Loading. Please do not click off this window.")
 			.css("text-align","center");
 		$("body").append(loadingImg).append(loadingText);
+		arr=new Array();
 
 	}
 	$.get(url, function(response,status) {
 		for (var i = response["data"].length - 1; i >= 0; i--) {
-			var id = response["data"][i]["id"].split("_")[1];
-			arr.push( id );
+			if( (response["data"][i]["status_type"] != "added_photos") && (response["data"][i]["type"]!="video" ) ){
+				var id = response["data"][i]["id"].split("_")[1];
+				arr.push( id );
+			}
 		}
 		if( response.paging!= undefined){
 			var next = response.paging["next"] + "&access token=" + access_token;
@@ -95,34 +98,92 @@ function iterateResponse(arr, url,access_token){
 	});
 }
 function showConfirmation(arr) {
-	var container = $("<div/>")
-		.addClass("well")
-		.text("This will delete " + arr.length + " posts. Are you sure you want to continue?")
-		.css({
-			"margin-bottom":"0px",
-			"display":"inline-block"
-		})
-	.append( 
-		$("<button/>")
-			.addClass('btn')
-			.addClass('btn-danger')
-			.html('Delete')
+	if(arr.length>0){
+		var container = $("<div/>")
+			.addClass("well")
+			.text("This will delete " + arr.length + " posts. Are you sure you want to continue?")
 			.css({
-				"display":"block",
-				"margin":"5px"
+				"margin-bottom":"0px",
+				"display":"inline-block"
+			})
+		.append( 
+			$("<button/>")
+				.addClass('btn')
+				.addClass('btn-danger')
+				.html('Delete')
+				.css({
+					"display":"block",
+					"margin":"5px"
 
-			})
-			.click(function() { 
-				initiateDeletion(arr)
-			})
-		);
-	$("body").append(container);
-	 
+				})
+				.click(function() { 
+					initiateDeletion(arr)
+				})
+			);
+		$("body").append(container);
+	}else{
+
+		var container = $("<div/>")
+			.addClass("well")
+			.text("There are no posts in this range.")
+			.css({
+				"margin-bottom":"0px",
+				"display":"inline-block",
+				"width": "300px",
+				"text-align": "Center"
+			}).appendTo($("body"));
+	}
 }
 
 function initiateDeletion(arr){
 	$(".well").html("Deletion in progress. Feel free to use your browser, but do not use the Facebook page that just opened. It will alert you when finished.");
 	chrome.extension.getBackgroundPage().setUpMessaging(arr);
+	
+
+	$("<div/>").addClass("progress")
+		.append(
+			$("<div/>")
+			.addClass("progress-bar")
+			.width("0%")
+			.attr({
+				"id" : "successProgress",
+				"role":"progressBar",
+				"aria-valuenow":"0",
+				"aria-valuemin":"0",
+				"aria-valuemax":arr.length
+			})
+			.text("0%")).append(
+				$("<div/>")
+				.addClass("progress-bar")
+				.addClass('progress-bar-danger')
+				.width("0%")
+				.attr({
+					"id" : "failedProgress",
+					"role":"progressBar",
+					"aria-valuenow":"0",
+					"aria-valuemin":"0",
+					"aria-valuemax":arr.length
+				}).text("")).appendTo($(".well"));
+
+		var interval = setInterval(function() {
+			var percent  = Math.round( 100 *(localStorage.success+localStorage.failed) /arr.length);
+			var successPercent = Math.round( 100 *localStorage.success /arr.length);
+			var failedPercent = Math.round( 100 *localStorage.failed /arr.length);
+
+			$("#successProgress")
+				.width(successPercent+"%")
+				.text(successPercent+"%")
+				.attr("aria-valuenow",successPercent);
+			$("#failedProgress")
+				.width(failedPercent+"%")
+				.text(failedPercent+"%")
+				.attr("aria-valuenow",failedPercent);
+
+
+			if(percent==100){
+				clearInterval(interval);
+			}
+		}, 400);
 }
 
 });

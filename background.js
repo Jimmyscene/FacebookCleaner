@@ -96,17 +96,24 @@ function setUpMessaging(deletionList){
         "url": "https://www.facebook.com/",
         "active" : false
     }, function(tab) {
+        localStorage.success=0;
+        localStorage.failed=0;
         chrome.tabs.executeScript(tab.id, { "file": "injection.js" },
             function() {
                 var port = chrome.tabs.connect(tab.id);
                 setUpMessaging.index =0;
                 port.postMessage({postId: deletionList[setUpMessaging.index++]});
                 port.onMessage.addListener(function(msg) {
-                    console.log(msg);
+                    if(msg.status==200){
+                        localStorage.success++;
+                    }else{
+                        localStorage.failed++;
+                    }
                     if(setUpMessaging.index<deletionList.length){
                         port.postMessage({postId: deletionList[setUpMessaging.index++]});
                     }else{
                         alert("Deletion Finished. Thank you for using FacebookCleaner.");
+                        localStorage.clear();
                         chrome.tabs.remove(tab.id);
                     }
                 

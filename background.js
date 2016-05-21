@@ -9,10 +9,10 @@ $(function() {
                     console.log("Have Access Token: " + accessToken);
                 },
                 function() { //don't have access Token
-                	clearData();
+                    clearData();
                     getAccessToken(
                         function(accessToken) {
-                        	getUserInfo();
+                            getUserInfo();
                             console.log("Got Access Token: " + accessToken);
                         });
                 });
@@ -91,33 +91,36 @@ function getAccessToken(callback) {
 
 
 
-function setUpMessaging(deletionList){
+function setUpMessaging(deletionList) {
     chrome.tabs.create({
         "url": "https://www.facebook.com/",
-        "active" : false
+        "active": false
     }, function(tab) {
-        localStorage.success=0;
-        localStorage.failed=0;
+        localStorage.success = 0;
+        localStorage.failed = 0;
         chrome.tabs.executeScript(tab.id, { "file": "injection.js" },
             function() {
                 var port = chrome.tabs.connect(tab.id);
-                setUpMessaging.index =0;
-                port.postMessage({postId: deletionList[setUpMessaging.index++]});
                 port.onMessage.addListener(function(msg) {
-                    if(msg.status==200){
+                    if (msg.status == 200) {
                         localStorage.success++;
-                    }else{
+                    } else {
                         localStorage.failed++;
                     }
-                    if(setUpMessaging.index<deletionList.length){
-                        port.postMessage({postId: deletionList[setUpMessaging.index++]});
-                    }else{
-                        alert("Deletion Finished. Thank you for using FacebookCleaner.");
-                        localStorage.clear();
+                                       
+                    if (parseInt(localStorage.success) + parseInt(localStorage.failed) == deletionList.length) {
+                        if (localStorage.failed > 0) {
+                            alert("Finished with " + localStorage.failed + "errors. Try again to remedy the errors");
+                        } else {
+                            alert("Deletion Finished. Thank you for using FacebookCleaner");
+                        }
+                        localStorage.clear()
                         chrome.tabs.remove(tab.id);
                     }
-                
                 });
+                for (var index = deletionList.length - 1; index >= 0; index--) {
+                    port.postMessage({ postId: deletionList[index] });
+                }
             });
     });
 
@@ -134,13 +137,13 @@ function getUserInfo(callback) {
         xhr.addEventListener("load", function() {
             responseText = JSON.parse(xhr.responseText);
             resultsObj = {
-            	'Name': responseText["name"],
+                'Name': responseText["name"],
                 'Picture': responseText["picture"]["data"]["url"]
             }
             chrome.storage.sync.set(resultsObj, function() {
-            	if(callback){
-            		callback(resultsObj);
-            	}
+                if (callback) {
+                    callback(resultsObj);
+                }
             });
         });
         xhr.send();
@@ -151,5 +154,3 @@ function getUserInfo(callback) {
 function clearData() { //Doesnt clear helpMessageShown
     chrome.storage.sync.remove(["Name", "Picture", "access_token", "expires_on"]);
 }
-
-

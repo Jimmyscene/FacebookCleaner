@@ -10,7 +10,7 @@
 	},
 
 	"browser_action" : {
-		"default_icon" : "resources/icon.png",
+		"default_icon" : "resources/icon128x128.png",
 		"default_title" : "Facebook Cleaner",
 		"default_popup" : "popup.html"
 	},

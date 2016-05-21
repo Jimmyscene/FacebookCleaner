@@ -41,7 +41,7 @@ function showOptions(){
 function handleSubmit(form){
 	chrome.storage.sync.get("access_token", function(results) {
 		if(results["access_token"]){
-			var baseURL = "https://graph.facebook.com/v2.5/me/posts/?fields=type,id,status_type& access token=" + results.access_token;
+			var baseURL = "https://graph.facebook.com/v2.5/me/posts/?fields=story,message,type,id,status_type& access token=" + results.access_token;
 			switch(form.id){
 				case "beforeForm":
 					var beforeDate = new Date($("#beforeForm").children("input[type=date]")[0].value  + "T06:00:00").toDateString();
@@ -82,7 +82,8 @@ function iterateResponse(arr, url,access_token){
 	}
 	$.get(url, function(response,status) {
 		for (var i = response["data"].length - 1; i >= 0; i--) {
-			if( (response["data"][i]["status_type"] != "added_photos") ){
+			if( ! ((response["data"][i]["status_type"] == "added_photos") || ( response["data"][i]["type"] == "video" && response["data"][i]["story"]!=undefined && response["data"][i]["story"].indexOf("tagged")>0 )) ){
+				console.log(response["data"][i]);
 				var id = response["data"][i]["id"].split("_")[1];
 				arr.push( id );
 			}
@@ -176,7 +177,6 @@ function initiateDeletion(arr){
 				.attr("aria-valuenow",successPercent);
 			$("#failedProgress")
 				.width(failedPercent+"%")
-				.text(failedPercent+"%")
 				.attr("aria-valuenow",failedPercent);
 
 
@@ -189,3 +189,24 @@ function initiateDeletion(arr){
 });
 
 // Status code 400 --  Possible expired TOken
+
+// 6-1-13
+/*
+
+Object {message: "http://www.youtube.com/watch?v=mUIEJvPY20w", type: "video", id: "10153761057286893_528268030558255", status_type: "shared_story"}
+Object {message: "This.", type: "link", id: "10153761057286893_135181349997017", status_type: "shared_story"}
+Object {type: "link", id: "10153761057286893_527129340670464", status_type: "shared_story"}
+Object {type: "video", id: "10153761057286893_10151578930206893", status_type: "shared_story"}
+Object {type: "video", id: "10153761057286893_10150357231496893"}
+Object {type: "video", id: "10153761057286893_10150280477881893"}
+Object {type: "video", id: "10153761057286893_10150165877346893"}
+
+
+
+Can't delete "added_photos"
+
+Can't delete video story=="%USER% was tagged in a video "
+CAN DELETE video story == "shared_story"
+CAN DELETE link story == "%USER% added a life event"
+
+*/

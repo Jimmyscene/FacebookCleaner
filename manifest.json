@@ -3,8 +3,8 @@
 
 	"name" : "Facebook Cleaner",
 	"description" : "Facebook Cleaner",
-	"version" : "0.9",
-	"content_security_policy": "script-src 'self' 'unsafe-eval' https://connect.facebook.net; object-src 'self'",    //FIX THIS
+	"version" : "0.2.4",
+	"content_security_policy": "script-src 'self' 'unsafe-eval' https://connect.facebook.net; object-src 'self'",    
 	"background": {
 		"scripts":["resources/js/jquery.min.js","background.js"]
 	},

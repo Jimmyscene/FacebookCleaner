@@ -1,4 +1,16 @@
 $(function() {
+	$("form").each(function() {
+		$(this).submit(function(e) {
+			handleSubmit(e.target);
+			e.preventDefault(); 
+		});
+	});
+	var initialHtml = "<html>"  + $("html").html() + "</html>";
+	
+	initPopup();
+
+
+function initPopup(results) {
 	chrome.storage.sync.get(
 		["Name","Picture"]
 	, function(results) {
@@ -9,13 +21,10 @@ $(function() {
 				showUserData(args);
 			});
 		}
-	});
-	$("form").each(function() {
-		$(this).submit(function(e) {
-			handleSubmit(e.target);
-			e.preventDefault(); 
-		});
-	});
+	}); 
+	
+}
+
 function showUserData(results) {
 	var profilePicture = $("<img/>", {
 		"id" : "fbProfile",
@@ -28,16 +37,6 @@ function showUserData(results) {
 	$("#homerow").append(profilePicture).append(userName);
 }
 
-
-function showOptions(){
-
-	var dateRange = $("<a/>", {
-		"data-toggle" : "collapse",
-		"id" : "dateRange",
-		"text": "Delete posts between two dates",
-		"href" : "#collapse" 
-	}); 
-}
 function handleSubmit(form){
 	chrome.storage.sync.get("access_token", function(results) {
 		if(results["access_token"]){
@@ -77,13 +76,12 @@ function iterateResponse(arr, url,access_token){
 			.html("Loading. Please do not click off this window.")
 			.css("text-align","center");
 		$("body").append(loadingImg).append(loadingText);
-		arr=new Array();
+		arr = new Array();
 
 	}
 	$.get(url, function(response,status) {
 		for (var i = response["data"].length - 1; i >= 0; i--) {
 			if( ! ((response["data"][i]["status_type"] == "added_photos") || ( response["data"][i]["type"] == "video" && response["data"][i]["story"]!=undefined && response["data"][i]["story"].indexOf("tagged")>0 )) ){
-				console.log(response["data"][i]);
 				var id = response["data"][i]["id"].split("_")[1];
 				arr.push( id );
 			}
@@ -102,23 +100,43 @@ function showConfirmation(arr) {
 	if(arr.length>0){
 		var container = $("<div/>")
 			.addClass("well")
+			.attr({
+					"id" : "container"
+				})
 			.text("This will delete " + arr.length + " posts. Are you sure you want to continue?")
 			.css({
 				"margin-bottom":"0px",
 				"display":"inline-block"
 			})
+		.append("<br/>")
 		.append( 
 			$("<button/>")
 				.addClass('btn')
 				.addClass('btn-danger')
 				.html('Delete')
 				.css({
-					"display":"block",
+					"display":"inline-block	",
 					"margin":"5px"
 
 				})
 				.click(function() { 
 					initiateDeletion(arr)
+				})
+			)
+		.append(
+			$("<button/>")
+				.addClass('btn')
+				.addClass('btn-primary')
+				.addClass('pull-right')
+				.html('Cancel')
+				.css({
+					"display":"inline-block	",
+					"margin":"5px"
+
+				})
+				.click(function() { 
+					$("#options").show();
+					$("#container").remove();
 				})
 			);
 		$("body").append(container);

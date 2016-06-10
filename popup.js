@@ -23,7 +23,7 @@ function showData(results) {
 function initPopup(results) {
 	chrome.storage.sync.get(
 		["Name","Picture"]
-	, Data(results)
+	, showData
 	);
 }
 

@@ -2,11 +2,11 @@ $(function() {
 	$("form").each(function() {
 		$(this).submit(function(e) {
 			handleSubmit(e.target);
-			e.preventDefault(); 
+			e.preventDefault();
 		});
 	});
 	var initialHtml = "<html>"  + $("html").html() + "</html>";
-	
+
 	initPopup();
 
 
@@ -21,8 +21,8 @@ function initPopup(results) {
 				showUserData(args);
 			});
 		}
-	}); 
-	
+	});
+
 }
 
 function showUserData(results) {
@@ -56,13 +56,13 @@ function handleSubmit(form){
 					baseURL += "&since=" + sinceDate + "&until=" + untilDate;
 					break;
 				default:
-					return;	
+					return;
 			}
 			iterateResponse("",baseURL,results.access_token);
 		}
 	});
-	
-	
+
+
 }
 function iterateResponse(arr, url,access_token){
 	var loadingImg,loadingText,loadingShown;
@@ -110,7 +110,7 @@ function showConfirmation(arr) {
 				"display":"inline-block"
 			})
 		.append("<br/>")
-		.append( 
+		.append(
 			$("<button/>")
 				.addClass('btn')
 				.addClass('btn-danger')
@@ -120,7 +120,7 @@ function showConfirmation(arr) {
 					"margin":"5px"
 
 				})
-				.click(function() { 
+				.click(function() {
 					initiateDeletion(arr)
 				})
 			)
@@ -135,7 +135,7 @@ function showConfirmation(arr) {
 					"margin":"5px"
 
 				})
-				.click(function() { 
+				.click(function() {
 					$("#options").show();
 					$("#container").remove();
 				})
@@ -158,7 +158,7 @@ function showConfirmation(arr) {
 function initiateDeletion(arr){
 	$(".well").html("Deletion in progress. Feel free to use your browser, but do not use the Facebook page that just opened. It will alert you when finished.");
 	chrome.extension.getBackgroundPage().setUpMessaging(arr);
-	
+
 
 	$("<div/>").addClass("progress")
 		.append(

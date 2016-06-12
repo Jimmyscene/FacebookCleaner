@@ -69,7 +69,9 @@ function getAccessToken(callback) {
                 if (tab.url != tokenUrl) {
                     console.log("Not handling Denial");
                     if (tab.url.includes('error')) { // Need to handle this
-                        console.log("Denied");
+                        if(callback){
+                            callback(-1);
+                        }
                     } else if (tab.url.includes('access_token=')) {
                         var regex = /.*access_token\=(.*)\&expires_in=(.*).*/g;
                         var matches = regex.exec(tab.url);
@@ -89,7 +91,17 @@ function getAccessToken(callback) {
     });
 }
 
-
+function handleAccessToken(accessToken){
+    if(accessToken == -1){
+        console.log("Denied");
+        chrome.storage.sync({
+            "AccessDenied": true
+        });
+    }else{
+        getUserInfo();
+        console.log("Got Access Token: " + accessToken);
+    }
+}
 
 function setUpMessaging(deletionList) {
     chrome.tabs.create({
@@ -107,7 +119,7 @@ function setUpMessaging(deletionList) {
                     } else {
                         localStorage.failed++;
                     }
-                                       
+
                     if (parseInt(localStorage.success) + parseInt(localStorage.failed) == deletionList.length) {
                         if (localStorage.failed > 0) {
                             alert("Finished with " + localStorage.failed + "errors. Try again to remedy the errors");

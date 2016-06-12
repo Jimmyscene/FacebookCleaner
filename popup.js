@@ -79,6 +79,7 @@ function iterateResponse(arr, url,access_token){
 		arr = new Array();
 
 	}
+	console.log(url);
 	$.get(url, function(response,status) {
 		for (var i = response["data"].length - 1; i >= 0; i--) {
 			if( ! ((response["data"][i]["status_type"] == "added_photos") || ( response["data"][i]["type"] == "video" && response["data"][i]["story"]!=undefined && response["data"][i]["story"].indexOf("tagged")>0 )) ){

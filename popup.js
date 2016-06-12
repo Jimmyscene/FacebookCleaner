@@ -1,28 +1,30 @@
 $(function() {
+
 	$("form").each(function() {
 		$(this).submit(function(e) {
 			handleSubmit(e.target);
 			e.preventDefault();
 		});
 	});
+
 	var initialHtml = "<html>"  + $("html").html() + "</html>";
 
 	initPopup();
 
-
+function showData(results) {
+	if(results['Picture']) {
+		showUserData(results);
+	} else {
+		chrome.extension.getBackgroundPage().getUserInfo(function(args) {
+			showUserData(args);
+		});
+	}
+}
 function initPopup(results) {
 	chrome.storage.sync.get(
 		["Name","Picture"]
-	, function(results) {
-		if(results["Picture"]){
-			showUserData(results);
-		}else{
-			chrome.extension.getBackgroundPage().getUserInfo(function(args) {
-				showUserData(args);
-			});
-		}
-	});
-
+	, showData
+	);
 }
 
 function showUserData(results) {
@@ -36,173 +38,253 @@ function showUserData(results) {
 	});
 	$("#homerow").append(profilePicture).append(userName);
 }
+function getDateStr(element,children) {
+	return new Date( $(element).children(children)[0].value + "T06:00:00").toDateString();
+}
+function appendTag(url,tag,val) {
+	url += "&"+tag+"="+val;
+	return url;
+}
+
+function appendSinceTag(url) {
+	var beforeDate = getDateStr("#beforeForm","input[type=date]");
+	return appendTag(url,"until",beforeDate);
+}
+
+function appendFromTag(url) {
+	var afterDate = getDateStr("#afterForm","input[type=date]");
+	return appendTag(url,"since",afterDate);
+}
+
+function appendRangeFromTag(url) {
+	var sinceDate = getDateStr("#rangeForm","input#rangeFrom");
+	var untilDate = getDateStr("#rangeForm","input#rangeTo");
+
+	url = appendTag(url,"since",sinceDate);
+	url = appendTag(url,"until",untilDate);
+	return url;
+}
+
+function appendDateRange(url,form) {
+	if (form.id == 'beforeForm')
+		url = appendSinceTag(url);
+	else if (form.id == 'afterForm')
+		url = appendFromTag(url);
+	else if (form.id == 'rangeForm')
+		url = appendRangeFromTag(url);
+
+	return url;
+}
 
 function handleSubmit(form){
+	truncatedUrl = "https://graph.facebook.com/v2.5/me/posts/?fields=story,message,type,id,status_type& access token=";
 	chrome.storage.sync.get("access_token", function(results) {
-		if(results["access_token"]){
-			var baseURL = "https://graph.facebook.com/v2.5/me/posts/?fields=story,message,type,id,status_type& access token=" + results.access_token;
-			switch(form.id){
-				case "beforeForm":
-					var beforeDate = new Date($("#beforeForm").children("input[type=date]")[0].value  + "T06:00:00").toDateString();
-					baseURL += "&until=" + beforeDate;
-					break;
-				case "afterForm":
-					var afterDate = new Date($("#afterForm").children("input[type=date]")[0].value + "T06:00:00").toDateString();
-					baseURL += "&since=" + afterDate;
-					break;
-				case "rangeForm":
-					var sinceDate = new Date($("#rangeForm").children("input#rangeFrom")[0].value + "T06:00:00").toDateString();
-					var untilDate = new Date($("#rangeForm").children("input#rangeTo")[0].value + "T06:00:00").toDateString();
-					baseURL += "&since=" + sinceDate + "&until=" + untilDate;
-					break;
-				default:
-					return;
-			}
+		if ( results["access_token"] ) {
+			var baseURL = truncatedUrl + results.access_token;
+
+			baseURL = appendDateRange(baseURL, form);
+
 			iterateResponse("",baseURL,results.access_token);
 		}
 	});
+}
+
+function setupLoadingDisplay() {
+	var loadingImg,loadingText;
+	$("#options").hide();
+	loadingImg = $("<img/>")
+		.attr( {'id' : 'loadingImg','src':'resources/ajax-loader.gif'} )
+		.css({"display": "block","margin":"0 auto"});
+	loadingText = $("<p/>")
+		.attr("id","loadingText")
+		.html("Loading. Please do not click off this window.")
+		.css("text-align","center");
+	$("body").append(loadingImg).append(loadingText);
+
 
 
 }
-function iterateResponse(arr, url,access_token){
-	var loadingImg,loadingText,loadingShown;
-	if(arr === ""){
-		$("#options").hide();
-		loadingImg = $("<img/>")
-			.attr( {'id' : 'loadingImg','src':'resources/ajax-loader.gif'} )
-			.css({"display": "block","margin":"0 auto"});
-		loadingText = $("<p/>")
-			.attr("id","loadingText")
-			.html("Loading. Please do not click off this window.")
-			.css("text-align","center");
-		$("body").append(loadingImg).append(loadingText);
-		arr = new Array();
 
+function hasAddedPhotos(data) {
+	return data["status_type"] == "added_photos";
+}
+
+function hasVideo(data) {
+	ret =  data["type"] == "video";
+	ret = ret &&  data["story"]!=undefined ;
+	ret = ret && data["story"].indexOf("tagged")>0;
+
+	return ret;
+}
+
+function hasMultiMedia(data){
+	return hasAddedPhotos(data) || hasVideo(data);
+}
+
+function checkNextPage(arr,response,access_token) {
+	if( response.paging != undefined){
+		var next = response.paging["next"] + "&access token=" + access_token;
+		iterateResponse(arr,next,access_token);
+	}else{
+		$("#loadingImg").remove();
+		$("#loadingText").remove();
+		showConfirmation(arr);
 	}
-	console.log(url);
+}
+
+function iterateResponse(arr, url,access_token){
+	if(arr == ""){
+		setupLoadingDisplay();
+		arr = new Array();
+	}
 	$.get(url, function(response,status) {
-		for (var i = response["data"].length - 1; i >= 0; i--) {
-			if( ! ((response["data"][i]["status_type"] == "added_photos") || ( response["data"][i]["type"] == "video" && response["data"][i]["story"]!=undefined && response["data"][i]["story"].indexOf("tagged")>0 )) ){
-				var id = response["data"][i]["id"].split("_")[1];
-				arr.push( id );
+		response["data"].forEach(function(data) {
+			if (! hasMultiMedia(data) ) {
+				var id = data['id'].split("_")[1];
+				arr.push(id)
 			}
-		}
-		if( response.paging!= undefined){
-			var next = response.paging["next"] + "&access token=" + access_token;
-			iterateResponse(arr,next,access_token);
-		}else{
-			$("#loadingImg").remove();
-			$("#loadingText").remove();
-			showConfirmation(arr);
-		}
+		});
+		checkNextPage(arr,response,access_token);
+
 	});
 }
-function showConfirmation(arr) {
-	if(arr.length>0){
-		var container = $("<div/>")
-			.addClass("well")
-			.attr({
-					"id" : "container"
-				})
-			.text("This will delete " + arr.length + " posts. Are you sure you want to continue?")
-			.css({
-				"margin-bottom":"0px",
-				"display":"inline-block"
-			})
-		.append("<br/>")
-		.append(
-			$("<button/>")
+
+function newDeleteButton() {
+	var btn =  $("<button/>")
 				.addClass('btn')
 				.addClass('btn-danger')
 				.html('Delete')
 				.css({
 					"display":"inline-block	",
 					"margin":"5px"
-
-				})
-				.click(function() {
-					initiateDeletion(arr)
-				})
-			)
-		.append(
-			$("<button/>")
-				.addClass('btn')
-				.addClass('btn-primary')
-				.addClass('pull-right')
-				.html('Cancel')
-				.css({
-					"display":"inline-block	",
-					"margin":"5px"
-
-				})
-				.click(function() {
-					$("#options").show();
-					$("#container").remove();
-				})
-			);
-		$("body").append(container);
-	}else{
-
-		var container = $("<div/>")
-			.addClass("well")
-			.text("There are no posts in this range.")
-			.css({
-				"margin-bottom":"0px",
-				"display":"inline-block",
-				"width": "300px",
-				"text-align": "Center"
-			}).appendTo($("body"));
-	}
+				});
+	return btn;
 }
 
+function newCancelButton() {
+	var btn = $("<button/>")
+		.addClass('btn')
+		.addClass('btn-primary')
+		.addClass('pull-right')
+		.html('Cancel')
+		.css({
+			"display":"inline-block	",
+			"margin":"5px"
+
+		});
+	return btn;
+
+}
+
+function newPostContainer(arr) {
+	var container = $("<div/>")
+		.addClass("well")
+		.attr({
+				"id" : "container"
+			})
+		.text("This will delete " + arr.length + " posts. Are you sure you want to continue?")
+		.css({
+			"margin-bottom":"0px",
+			"display":"inline-block"
+		})
+	.append("<br/>")
+	.append( newDeleteButton().click(function() {
+				initiateDeletion(arr);
+			})
+		)
+	.append( newCancelButton().click(function() {
+				$("#options").show();
+				$("#container").remove();
+			})
+		);
+	return container;
+}
+
+function newNoPostContainer() {
+	var container = $("<div/>")
+		.addClass("well")
+		.text("There are no posts in this range.")
+		.css({
+			"margin-bottom":"0px",
+			"display":"inline-block",
+			"width": "300px",
+			"text-align": "Center"
+		});
+	return container;
+}
+
+function showConfirmation(arr) {
+	if(arr.length>0){
+		var container = newPostContainer(arr);
+		$("body").append(container);
+	}else{
+		newNoPostContainer().appendTo($("body"));
+	}
+}
+function setupSuccessBar(arr) {
+	var success_bar = $("<div/>")
+		.addClass("progress-bar")
+		.width("0%")
+		.attr({
+			"id" : "successProgress",
+			"role":"progressBar",
+			"aria-valuenow":"0",
+			"aria-valuemin":"0",
+			"aria-valuemax": arr.length
+		})
+		.text("0%")
+	return success_bar
+}
+function setupFailureBar(arr) {
+	var failure_bar =  $("<div/>")
+		.addClass("progress-bar")
+		.addClass('progress-bar-danger')
+		.width("0%")
+		.attr({
+			"id" : "failedProgress",
+			"role":"progressBar",
+			"aria-valuenow":"0",
+			"aria-valuemin":"0",
+			"aria-valuemax": arr.length
+		}).text("")
+	return failure_bar;
+}
+function setupProgressBar(arr) {
+	var progress_bar = $("<div/>").addClass("progress")
+	.append(setupSuccessBar(arr))
+	.append(setupFailureBar(arr))
+	.appendTo($(".well"));
+}
+
+function updateSuccessBar(percent) {
+	$("#successProgress")
+		.width(percent+"%")
+		.text(percent+"%")
+		.attr("aria-valuenow",percent);
+}
+function updateFailureBar(failedPercent) {
+	$("#failedProgress")
+		.width(failedPercent+"%")
+		.attr("aria-valuenow",failedPercent);
+}
 function initiateDeletion(arr){
 	$(".well").html("Deletion in progress. Feel free to use your browser, but do not use the Facebook page that just opened. It will alert you when finished.");
 	chrome.extension.getBackgroundPage().setUpMessaging(arr);
 
+	setupProgressBar(arr)
 
-	$("<div/>").addClass("progress")
-		.append(
-			$("<div/>")
-			.addClass("progress-bar")
-			.width("0%")
-			.attr({
-				"id" : "successProgress",
-				"role":"progressBar",
-				"aria-valuenow":"0",
-				"aria-valuemin":"0",
-				"aria-valuemax":arr.length
-			})
-			.text("0%")).append(
-				$("<div/>")
-				.addClass("progress-bar")
-				.addClass('progress-bar-danger')
-				.width("0%")
-				.attr({
-					"id" : "failedProgress",
-					"role":"progressBar",
-					"aria-valuenow":"0",
-					"aria-valuemin":"0",
-					"aria-valuemax":arr.length
-				}).text("")).appendTo($(".well"));
+	var interval = setInterval(function() {
+		var percent  = Math.round( 100 *(localStorage.success+localStorage.failed) /arr.length);
+		var successPercent = Math.round( 100 *localStorage.success /arr.length);
+		var failedPercent = Math.round( 100 *localStorage.failed /arr.length);
 
-		var interval = setInterval(function() {
-			var percent  = Math.round( 100 *(localStorage.success+localStorage.failed) /arr.length);
-			var successPercent = Math.round( 100 *localStorage.success /arr.length);
-			var failedPercent = Math.round( 100 *localStorage.failed /arr.length);
+		updateSuccessBar(successPercent);
+		updateFailureBar(failedPercent);
 
-			$("#successProgress")
-				.width(successPercent+"%")
-				.text(successPercent+"%")
-				.attr("aria-valuenow",successPercent);
-			$("#failedProgress")
-				.width(failedPercent+"%")
-				.attr("aria-valuenow",failedPercent);
-
-
-			if(percent==100){
-				clearInterval(interval);
-			}
-		}, 400);
+		if(percent==100){
+			clearInterval(interval);
+		}
+	}, 400);
 }
 
 });

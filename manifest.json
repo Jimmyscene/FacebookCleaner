@@ -16,8 +16,11 @@
 	},
 	"externally_connectable" : {
 		"matches": ["*://*.facebook.com/*"]
-	}
-	,
+	},
+	"icons" : {
+			"128" : "resources/facebookCleaner.png"
+	},
+
 	"permissions" : [
 		"storage",
 		"tabs",

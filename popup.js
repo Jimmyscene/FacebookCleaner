@@ -1,4 +1,5 @@
 $(function() {
+<<<<<<< HEAD
 
 	chrome.storage.sync.get("AccessGranted", function(results) {
 		if(results["AccessGranted"] == true){
@@ -114,10 +115,8 @@ $(function() {
 			.html("Loading. Please do not click off this window.")
 			.css("text-align","center");
 		$("body").append(loadingImg).append(loadingText);
-
-
-
 	}
+<<<<<<< HEAD
 
 	function hasAddedPhotos(data) {
 		return data["status_type"] == "added_photos";
@@ -325,7 +324,6 @@ $(function() {
 			}
 		}, 400);
 	}
-
 });
 
 // Status code 400 --  Possible expired TOken

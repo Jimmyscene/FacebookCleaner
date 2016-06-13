@@ -1,5 +1,5 @@
 $(function() {
-<<<<<<< HEAD
+
 
 	chrome.storage.sync.get("AccessGranted", function(results) {
 		if(results["AccessGranted"] == true){
@@ -116,7 +116,7 @@ $(function() {
 			.css("text-align","center");
 		$("body").append(loadingImg).append(loadingText);
 	}
-<<<<<<< HEAD
+
 
 	function hasAddedPhotos(data) {
 		return data["status_type"] == "added_photos";

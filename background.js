@@ -9,7 +9,8 @@ function checkNewInstall(isNewInstall) {
     chrome.storage.sync.get("helpMessageShown", function(results) {
         if (results["helpMessageShown"]) {
             initBackground();
-        } else {
+        }
+        else {
             isNewInstall();
             initBackground();
 
@@ -49,11 +50,13 @@ function checkAccessToken(success, failure) {
             chrome.storage.sync.get("expires_on", function(dateResults) { //Check if token expired
                 if (dateResults["expires_on"] > new Date().getTime()) { //Date stored as UNIX timestamp; ie- 1461822756721
                     success(tokenResults["access_token"]);
-                } else {
+                }
+                else {
                     failure();
                 }
             });
-        } else {
+        }
+        else {
             failure();
         }
     });
@@ -106,7 +109,8 @@ function handleAccessToken(accessToken){
         chrome.storage.sync.set({
             "AccessGranted": false
         });
-    }else{
+    }
+    else{
         chrome.storage.sync.set({
             "AccessGranted": true
         });
@@ -135,7 +139,8 @@ function setUpMessaging(deletionList) {
                     if (parseInt(localStorage.success) + parseInt(localStorage.failed) == deletionList.length) {
                         if (localStorage.failed > 0) {
                             alert("Finished with " + localStorage.failed + "errors. Try again to remedy the errors");
-                        } else {
+                        }
+                        else {
                             alert("Deletion Finished. Thank you for using FacebookCleaner");
                         }
                         localStorage.clear()

@@ -5,7 +5,8 @@ $(function() {
 			setUpForms();
 			var initialHtml = "<html>"  + $("html").html() + "</html>";
 			initPopup();
-		}else {
+		}
+		else {
 			console.log("Not granted access")
 			$("body").append(noAccessContainer());
 		}
@@ -18,7 +19,8 @@ $(function() {
 	function showData(results) {
 		if(results['Picture']) {
 			showUserData(results);
-		} else {
+		}
+		else {
 			chrome.extension.getBackgroundPage().getUserInfo(function(args) {
 				showUserData(args);
 			});
@@ -137,7 +139,8 @@ $(function() {
 		if( response.paging != undefined){
 			var next = response.paging["next"] + "&access token=" + access_token;
 			iterateResponse(arr,next,access_token);
-		}else{
+		}
+		else {
 			$("#loadingImg").remove();
 			$("#loadingText").remove();
 			showConfirmation(arr);
@@ -252,7 +255,8 @@ $(function() {
 		if(arr.length>0){
 			var container = newPostContainer(arr);
 			$("body").append(container);
-		}else{
+		}
+		else{
 			newNoPostContainer().appendTo($("body"));
 		}
 	}

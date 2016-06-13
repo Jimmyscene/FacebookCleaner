@@ -2,36 +2,39 @@ $(function() {
     checkNewInstall(
         function() { //isNewInstall
             showHelpMessage();
-        },
-        function() { //init Background
-            checkAccessToken(
-                function(accessToken) { //have access Token
-                    console.log("Have Access Token: " + accessToken);
-                },
-                function() { //don't have access Token
-                    clearData();
-                    getAccessToken(
-                        function(accessToken) {
-                            getUserInfo();
-                            console.log("Got Access Token: " + accessToken);
-                        });
-                });
         });
-
 });
 
-function checkNewInstall(isNewInstall, initBackground) {
+function checkNewInstall(isNewInstall) {
     chrome.storage.sync.get("helpMessageShown", function(results) {
         if (results["helpMessageShown"]) {
             initBackground();
         } else {
             isNewInstall();
             initBackground();
+
         }
 
     });
 }
+function initBackground() {
+    checkAccessToken(
+        function(accessToken) { //have access Token
+            console.log("Have Access Token: " + accessToken);
+        },
+        function() { //don't have access Token
+            clearData();
+            chrome.storage.sync.get("AccessGranted",function(results) {
+                if(results["AccessGranted"]==false){
+                    console.log("Don't have access");
+                }
+                else{
+                    getAccessToken(handleAccessToken);
+                }
+            });
 
+        });
+}
 function showHelpMessage() {
     console.log("Showing Help Message");
     chrome.storage.sync.set({
@@ -67,24 +70,30 @@ function getAccessToken(callback) {
         chrome.tabs.onUpdated.addListener(function checkTab(tabId, changeInfo, tab) {
             if (tabId == tabDetails.id) {
                 if (tab.url != tokenUrl) {
-                    console.log("Not handling Denial");
-                    if (tab.url.includes('error')) { // Need to handle this
+                    if (tab.url.includes('error')) {
                         if(callback){
                             callback(-1);
                         }
-                    } else if (tab.url.includes('access_token=')) {
+                    }
+                    else if (tab.url.includes('access_token=')) {
                         var regex = /.*access_token\=(.*)\&expires_in=(.*).*/g;
                         var matches = regex.exec(tab.url);
                         chrome.storage.sync.set({
                             "access_token": matches[1],
                             "expires_on": new Date(new Date().getTime() + parseInt(matches[2]) * 1000).getTime()
                         });
-                        chrome.tabs.remove(tabDetails.id);
-                        chrome.tabs.onUpdated.removeListener(checkTab);
                         if (callback) {
                             callback(matches[1]);
                         }
                     }
+                    else{
+                        /*
+                        Possible other options... ?
+                        */
+                        callback(-1);
+                    }
+                    chrome.tabs.remove(tabDetails.id);
+                    chrome.tabs.onUpdated.removeListener(checkTab);
                 }
             }
         });
@@ -94,10 +103,13 @@ function getAccessToken(callback) {
 function handleAccessToken(accessToken){
     if(accessToken == -1){
         console.log("Denied");
-        chrome.storage.sync({
-            "AccessDenied": true
+        chrome.storage.sync.set({
+            "AccessGranted": false
         });
     }else{
+        chrome.storage.sync.set({
+            "AccessGranted": true
+        });
         getUserInfo();
         console.log("Got Access Token: " + accessToken);
     }
@@ -163,6 +175,6 @@ function getUserInfo(callback) {
     });
 }
 
-function clearData() { //Doesnt clear helpMessageShown
+function clearData() { //Doesnt clear helpMessageShown or Access Granted
     chrome.storage.sync.remove(["Name", "Picture", "access_token", "expires_on"]);
 }

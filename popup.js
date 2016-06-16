@@ -6,6 +6,7 @@ $(function() {
 			setUpForms();
 			var initialHtml = "<html>"  + $("html").html() + "</html>";
 			initPopup();
+
 		}
 		else {
 			console.log("Not granted access")
@@ -43,6 +44,7 @@ $(function() {
 		var userName = $("<h4/>", {
 			"text" : results["Name"]
 		});
+		$("body").prepend(logOutButton());
 		$("#homerow").append(profilePicture).append(userName);
 	}
 	function getDateStr(element,children) {
@@ -305,6 +307,32 @@ $(function() {
 			.width(failedPercent+"%")
 			.attr("aria-valuenow",failedPercent);
 	}
+
+	function logOutButton() {
+		var div = $("<div/>")
+			.addClass("dropdown")
+			.addClass("pull-right")
+		var button = $("<button/>")
+			.addClass("btn btn-default dropdown-toggle")
+			.attr({
+				"type":"button",
+				"id" : "logOutButton",
+				"data-toggle": "dropdown"
+			});
+		var span  = $("<span/>")
+			.addClass("glyphicon glyphicon-cog");
+		var dropdown = $("<ul/>")
+			.addClass("dropdown-menu");
+		var logout = $("<li/>")
+			.append(
+				$("<a/>")
+				.text("Log Out")
+				.click(function() { alert("NYI") })
+			);
+		var btn = div.append(button.html(span)).append(dropdown.append(logout));
+		return btn;
+	}
+
 	function initiateDeletion(arr){
 		$(".well").html("Deletion in progress. Feel free to use your browser, but do not use the Facebook page that just opened. It will alert you when finished.");
 		chrome.extension.getBackgroundPage().setUpMessaging(arr);
